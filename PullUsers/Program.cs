@@ -1,4 +1,4 @@
-﻿
+
 namespace PullUsers
 {
 
@@ -26,55 +26,64 @@ namespace PullUsers
 		public static async Task Main()
 		{
 			try
-			{
-				await SetPathAndType();
+			{	
 				using FileHandler UsersFile = new();
-				await UsersFile.CreateFile(StaticData.path);
-				await UsersFile.InitFile();
 				using Mutex mutex = new();
 
-				var t1 = Task.Run(async () =>
+				var CreateFile = Task.Run(async () => {
+					await SetPathAndType();
+					await UsersFile.CreateFile(StaticData.path);
+					await UsersFile.InitFile();
+				});
+
+				var users1 =  Source1.GetUsers(); 
+				var users2 =  Source2.GetUsers(); 
+				var users3 =  Source3.GetUsers(); 
+				var users4 =  Source4.GetUsers();
+
+				await CreateFile;
+
+				var write1 = Task.Run(async () =>
 				{
 					try
-					{
-						var users = await Source1.GetUsers();
-						await UsersFile.WriteOnFile(users, mutex);
+					{		
+						await UsersFile.WriteOnFile(await users1, mutex);
 					}
 					catch (Exception ex)
 					{
 						Console.WriteLine($"An error occurred while getting users from source 1: {ex.Message}");
 					}
 				});
-				var t2 = Task.Run(async () =>
+				var write2 = Task.Run(async () =>
 				{
 					try
 					{
-						var users = await Source2.GetUsers();
-						await UsersFile.WriteOnFile(users, mutex);
+						await UsersFile.WriteOnFile(await users2, mutex);
+
 					}
 					catch (Exception ex)
 					{
 						Console.WriteLine($"An error occurred while getting users from source 2: {ex.Message}");
 					}
 				});
-				var t3 = Task.Run(async () =>
+				var write3 = Task.Run(async () =>
 				{
 					try
 					{
-						var users = await Source3.GetUsers();
-						await UsersFile.WriteOnFile(users, mutex);
+						await UsersFile.WriteOnFile(await users3, mutex);
+
 					}
 					catch (Exception ex)
 					{
 						Console.WriteLine($"An error occurred while getting users from source 3: {ex.Message}");
 					}
 				});
-				var t4 = Task.Run(async () =>
+				var write4 = Task.Run(async () =>
 				{
 					try
 					{
-						var users = await Source4.GetUsers();
-						await UsersFile.WriteOnFile(users, mutex);
+						await UsersFile.WriteOnFile(await users4, mutex);
+
 					}
 					catch (Exception ex)
 					{
@@ -82,13 +91,13 @@ namespace PullUsers
 					}
 				});
 
-				var tasks = new List<Task> { t1, t2, t3, t4 };
+				var WriteTasks = new List<Task> { write1, write2, write3, write4 };
 
-				while (tasks.Count > 0)
+				while (WriteTasks.Count > 0)
 				{
-					Task finishedTask = await Task.WhenAny(tasks);
+					Task finishedTask = await Task.WhenAny(WriteTasks);
 					await finishedTask;
-					tasks.Remove(finishedTask);
+					WriteTasks.Remove(finishedTask);
 				}
 
 				await UsersFile.CloseFile();
